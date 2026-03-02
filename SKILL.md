@@ -112,21 +112,61 @@ Use this action when the user wants to:
 - play a playlist
 - find music in Sonos Web App
 
-### Step A: Open Sonos Web App
-1. Open Chrome normally
-2. Open `https://play.sonos.com/zh-cn/web-app`
-3. Wait for page to load
+### Step A: Ensure Chrome is Running with Sonos Tab
+
+This step MUST work on a locked screen. Never use AppleScript GUI scripting.
+
+1. **Check if Chrome is running:**
+   ```bash
+   pgrep -x "Google Chrome"
+   ```
+
+2. **If Chrome is NOT running (no PID returned):**
+   Launch Chrome with the Sonos URL via shell command (works on locked screen):
+   ```bash
+   open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+   ```
+   Wait 8 seconds for Chrome to start and the page to load.
+
+3. **If Chrome IS running:**
+   Check browser tabs for an existing Sonos tab:
+   ```
+   browser: action: "tabs", profile: "chrome"
+   ```
+   - If a tab with URL containing `play.sonos.com` exists → use its `targetId`, go to Step B.
+   - If no Sonos tab exists → open one via shell:
+     ```bash
+     open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+     ```
+     Wait 5 seconds, then re-check tabs.
+
+4. **If Chrome was force-quit or zombie:**
+   Sometimes Chrome processes linger after force-quit. Kill cleanly first:
+   ```bash
+   pkill -x "Google Chrome" 2>/dev/null; sleep 2
+   open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+   ```
+   Wait 8 seconds.
 
 ### Step B: Verify Relay Attach
-Use browser tabs check.
+
+After Step A, verify the relay is connected:
+```
+browser: action: "tabs", profile: "chrome"
+```
+
 Attach is considered successful only if:
 - a Chrome tab URL contains `play.sonos.com`
-- and that tab has `wsUrl`
+- and that tab has `wsUrl` (meaning relay extension is connected)
 
-If attach fails:
-- reload the Sonos tab once
-- if still fails, restart Chrome and reopen Sonos page
-- if still fails, report attach failure clearly
+If NO tab has `wsUrl` after Chrome is running with the Sonos page:
+1. Wait 5 more seconds and re-check tabs (relay auto-attaches on page load)
+2. If still no `wsUrl`, try navigating the tab:
+   ```
+   browser: action: "navigate", profile: "chrome", targetId: "<sonos_tab_id>", targetUrl: "https://play.sonos.com/zh-cn/web-app"
+   ```
+3. Wait 5 seconds and re-check
+4. If still fails after 3 attempts, report: "Chrome relay 未连接，请确认 OpenClaw Browser Relay 扩展已安装并启用"
 
 ### Step C: Verify UI Ready
 Use browser snapshot.
@@ -292,8 +332,14 @@ Confirm:
 Use this only for search / playlist selection / playback triggering:
 1. retry current action once
 2. refresh browser snapshot and relocate elements
-3. reload Sonos tab
-4. restart Chrome and reopen Sonos page
+3. reload Sonos tab via navigate action
+4. if Chrome is unresponsive or no relay connection:
+   ```bash
+   pkill -x "Google Chrome" 2>/dev/null; sleep 2
+   open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+   ```
+   Wait 8 seconds, then re-verify relay attach per Step B.
+5. if still failing after full restart, report failure clearly
 
 If login is required:
 - stop and tell the user manual login is needed

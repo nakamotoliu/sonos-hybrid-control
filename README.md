@@ -41,6 +41,10 @@ For this skill to run fully autonomously in the background (e.g., via cron jobs)
    ```
 4. Reload the unpacked extension in `chrome://extensions/`.
 
+## Extension Architecture
+
+If you need to debug or modify the Browser Relay extension, read **[EXTENSION_ARCH.md](./EXTENSION_ARCH.md)** first. It documents the attach flow, common agent mistakes, and a verification checklist that prevents multi-round debugging.
+
 ## Installation
 
 1. **Install Sonos CLI**:

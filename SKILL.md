@@ -122,9 +122,9 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    ```
 
 2. **If Chrome is NOT running (no PID returned):**
-   Launch Chrome with the Sonos URL via shell command (works on locked screen):
+   Launch Chrome with a fresh window (works on locked screen, more stable for relay context):
    ```bash
-   open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+   open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
    ```
    Wait 8 seconds for Chrome to start and the page to load.
 
@@ -134,9 +134,9 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    browser: action: "tabs", profile: "chrome"
    ```
    - If a tab with URL containing `play.sonos.com` exists → use its `targetId`, go to Step B.
-   - If no Sonos tab exists → open one via shell:
+   - If no Sonos tab exists → open one via shell (prefer fresh window for deterministic attach):
      ```bash
-     open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+     open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
      ```
      Wait 5 seconds, then re-check tabs.
 
@@ -144,7 +144,7 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    Sometimes Chrome processes linger after force-quit. Kill cleanly first:
    ```bash
    pkill -x "Google Chrome" 2>/dev/null; sleep 2
-   open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
+   open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
    ```
    Wait 8 seconds.
 

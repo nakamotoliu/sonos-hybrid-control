@@ -116,6 +116,11 @@ Use this action when the user wants to:
 
 This step MUST work on a locked screen. Never use AppleScript GUI scripting.
 
+**Resource policy (mandatory):**
+- Prefer reusing an existing attached Sonos tab (`browser tabs` + same domain + `wsUrl`).
+- Open a new window only when no reusable Sonos tab exists.
+- Record tab created in this run and close only that tab when task completes (do not close user tabs).
+
 1. **Check if Chrome is running:**
    ```bash
    pgrep -x "Google Chrome"
@@ -134,7 +139,7 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    browser: action: "tabs", profile: "chrome"
    ```
    - If a tab with URL containing `play.sonos.com` exists → use its `targetId`, go to Step B.
-   - If no Sonos tab exists → open one via shell (prefer fresh window for deterministic attach):
+   - If no reusable Sonos tab exists → open one via shell (prefer fresh window for deterministic attach):
      ```bash
      open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
      ```

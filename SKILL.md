@@ -214,11 +214,12 @@ Additional hard checks:
 - If URI contains `x-sonosapi-stream` (live radio/tunein style), treat as invalid result for this workflow and re-select non-radio content.
 - Do not claim success when CLI is `STOPPED` even if Web UI button looks like playing.
 
-If verification fails:
-- retry current click once
-- choose next non-radio result and retry
-- refresh snapshot and retry
-- reload tab and retry
+If verification fails, use this retry ladder (mandatory):
+- Retry #1 (same content): click 播放/随机播放 once on the current non-radio item
+- Retry #2 (content switch): switch to the next non-radio playlist/album result and trigger play
+- Retry #3 (content switch): switch again to another non-radio result and trigger play
+- Then refresh snapshot and retry once
+- Then reload tab and retry once
 - if still failing, report that playback could not be confirmed
 
 ### Step F: Optional CLI Room Control
@@ -341,16 +342,18 @@ Confirm:
 
 ### Web Layer Recovery
 Use this only for search / playlist selection / playback triggering:
-1. retry current action once
-2. refresh browser snapshot and relocate elements
-3. reload Sonos tab via navigate action
-4. if Chrome is unresponsive or no relay connection:
+1. retry current action once (same content)
+2. switch content to next non-radio result and retry
+3. switch content again to another non-radio result and retry
+4. refresh browser snapshot and relocate elements
+5. reload Sonos tab via navigate action
+6. if Chrome is unresponsive or no relay connection:
    ```bash
    pkill -x "Google Chrome" 2>/dev/null; sleep 2
    open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
    ```
    Wait 8 seconds, then re-verify relay attach per Step B.
-5. if still failing after full restart, report failure clearly
+7. if still failing after full restart, report failure clearly
 
 If login is required:
 - stop and tell the user manual login is needed

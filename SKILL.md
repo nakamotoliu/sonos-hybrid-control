@@ -92,6 +92,21 @@ Extract:
 
 ---
 
+## Room Name Resolution (Mandatory)
+
+When user says a fuzzy room keyword (e.g. "客厅"), do not use it directly in CLI.
+You must resolve it to an exact speaker name first (e.g. "客厅 play5").
+
+Resolution order:
+1. Prefer exact names visible in Sonos Web App "系统视图" room cards.
+2. If Web view is unavailable, probe CLI with likely names and keep only successful exact matches.
+3. If multiple exact names match the same keyword, ask a short clarification before control.
+
+After resolution:
+- Store `resolved_room_name`
+- Use this exact value for every CLI command in this task
+- Never fallback to the fuzzy keyword once resolved
+
 ## Global Rules
 
 1. If the task requires searching media, use Web App.
@@ -99,8 +114,9 @@ Extract:
 3. For locked-screen execution, prefer CLI whenever possible.
 4. Never claim success without checking result.
 5. Default maximum volume is 50 unless the user explicitly requests a higher value.
-6. If a room is specified, always switch CLI context to that room before control.
-7. If Web playback is triggered successfully, subsequent volume / transport / grouping should use CLI, not Web UI.
+6. If a room is specified, always resolve user keyword to the exact Sonos speaker name first (mandatory).
+7. Use the resolved exact room name for all CLI calls (`--name "<exact_name>"`).
+8. If Web playback is triggered successfully, subsequent volume / transport / grouping should use CLI, not Web UI.
 
 ---
 
@@ -224,14 +240,11 @@ If verification fails, use this retry ladder (mandatory):
 
 ### Step F: Optional CLI Room Control
 If target_room is specified after Web playback begins:
-run:
-`sonos room <target_room>`
-
-Then verify:
-`sonos status`
+run CLI with resolved exact room name:
+`sonos status --name "<resolved_room_name>"`
 
 If needed, run:
-`sonos play`
+`sonos play --name "<resolved_room_name>"`
 
 ---
 
@@ -242,12 +255,12 @@ All volume operations must use Sonos CLI.
 Do not use Web UI slider.
 
 ### If target_room is specified
-Run:
-`sonos room <target_room>`
+Resolve to exact room name first, then run:
+`sonos status --name "<resolved_room_name>"`
 
 ### If user provided exact volume
 Run:
-`sonos volume <volume_level>`
+`sonos volume set --name "<resolved_room_name>" <volume_level>`
 
 ### If user said relative change only
 Use safe small-step adjustment:
@@ -256,8 +269,8 @@ Use safe small-step adjustment:
 
 If CLI supports relative volume adjustment, use it.
 If not, first read current volume from:
-`sonos status`
-Then calculate a nearby safe target and set it.
+`sonos status --name "<resolved_room_name>"`
+Then calculate a nearby safe target and set it with exact name.
 
 ### Safety Rule
 If requested volume > 50 and user did not explicitly authorize high volume:
@@ -266,7 +279,7 @@ If requested volume > 50 and user did not explicitly authorize high volume:
 
 ### Verification
 Run:
-`sonos status`
+`sonos status --name "<resolved_room_name>"`
 
 Confirm:
 - target room is correct
@@ -280,14 +293,12 @@ Confirm:
 All grouping and ungrouping must use Sonos CLI.
 
 ### Grouping
-1. Select anchor room:
-`sonos room <target_room>`
+1. Resolve anchor room to exact name (`resolved_room_name`).
 
-2. For each room in rooms:
-`sonos join <room_name>`
+2. For each room in rooms, resolve exact name then join via local CLI syntax.
 
-3. Verify:
-`sonos status`
+3. Verify with exact name:
+`sonos status --name "<resolved_room_name>"`
 
 Confirm that grouped rooms are reflected in CLI status.
 
@@ -310,26 +321,25 @@ Always verify after grouping changes.
 All transport operations should use Sonos CLI whenever possible.
 
 ### If target_room is specified
-Run:
-`sonos room <target_room>`
+Resolve to exact room name first.
 
-### Execute by transport value
+### Execute by transport value (always with exact name)
 
 If transport = play:
-`sonos play`
+`sonos play --name "<resolved_room_name>"`
 
 If transport = pause:
-`sonos pause`
+`sonos pause --name "<resolved_room_name>"`
 
 If transport = next:
-`sonos next`
+`sonos next --name "<resolved_room_name>"`
 
 If transport = prev:
-`sonos prev`
+`sonos prev --name "<resolved_room_name>"`
 
 ### Verification
 Run:
-`sonos status`
+`sonos status --name "<resolved_room_name>"`
 
 Confirm:
 - play => state becomes playing
@@ -360,9 +370,9 @@ If login is required:
 
 ### CLI Layer Recovery
 Use this for volume / grouping / transport:
-1. reselect target room
-2. retry command once
-3. run `sonos status`
+1. re-resolve room keyword to exact room name
+2. retry command once with `--name "<resolved_room_name>"`
+3. run `sonos status --name "<resolved_room_name>"`
 4. if still failing, report CLI command failure clearly
 
 Do not invent success if CLI output does not confirm the action.

@@ -196,21 +196,27 @@ If the page is not logged in:
    - 助眠
    - 治愈
 5. Open search and input the keyword
-6. Prefer playlist-like results
-   - first choice: 播放列表
-   - second choice: radio / mix / collection
+6. Strict result filter (no live radio)
+   - first choice: 播放列表 / 歌单 / mix / collection
+   - second choice: 专辑 / 艺人页中的“播放全部”
+   - hard block: 站点 / Radio / Sonos Radio / TuneIn / 直播电台
    - avoid single-song detail pages if possible
 7. Click 随机播放 if available, otherwise click 播放
 
 ### Step E: Verify Playback
-Playback is successful only if at least 3 of 4 signals are true, and progress movement is required:
+Playback is successful only if **CLI confirms PLAYING** and Web UI is consistent:
 1. target room is correct, if specified
 2. now playing content changed
 3. UI state indicates playing
-4. playback progress is moving
+4. CLI `sonos status --name "<room>"` shows `State: PLAYING`
+
+Additional hard checks:
+- If URI contains `x-sonosapi-stream` (live radio/tunein style), treat as invalid result for this workflow and re-select non-radio content.
+- Do not claim success when CLI is `STOPPED` even if Web UI button looks like playing.
 
 If verification fails:
 - retry current click once
+- choose next non-radio result and retry
 - refresh snapshot and retry
 - reload tab and retry
 - if still failing, report that playback could not be confirmed

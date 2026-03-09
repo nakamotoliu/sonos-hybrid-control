@@ -77,8 +77,9 @@ Expected user intent may include:
 
 Extract:
 - action = play_music
-- query = short mood keyword, ideally 2-4 Chinese characters
+- user_intent = the user's real current listening intent / scene
 - target_room = optional
+- candidate_queries = 3-5 short natural search phrases generated from the scene
 
 ### adjust_volume
 Expected user intent may include:
@@ -294,40 +295,76 @@ If UI elements are still not visible after login:
 - Refresh the page and wait 5 seconds
 - If still failing, report UI readiness issue
 
-### Step D: Lobster 7-Step Play Protocol
+### Step D: Controlled-Randomized Candidate Query Planning
 1. Snapshot current playback state
 2. If currently playing, pause first
 3. Wait until paused state is reflected in UI
-4. Reduce user intent into a 2-4 character keyword (mandatory)
-   - Never search with long natural-language phrases first.
-   - Always compress intent to a short keyword before typing.
-   Examples:
-   - 放松
-   - 专注
-   - 振奋
-   - 助眠
-   - 治愈
-   - 学友
-   - 男声
-   - 情歌
-   - 怀旧
+4. Infer the user's **real current listening scene** from the request
+   - Treat the user's words as the scene/intention, not as a fixed keyword to compress mechanically.
+   - Example scene types:
+     - 早晨 / 通勤 / 刚开始工作
+     - 上班提神 / 提升状态 / 打起精神
+     - 下午专注 / 保持效率
+     - 晚上放松 / 回家过渡
+     - 睡前 / 安静 / 助眠
+     - 怀旧 / 某位歌手 / 某种年代感
 
-   **Intent mapping hints (use when the user is vague):**
-   - 现在时间的歌 / 早上 / 早晨 / 早安 → 早安 / 清晨 / 通勤
-   - 上班提神 / 打起精神 / 提升状态 → 热歌 / 提神 / 振奋 / 通勤
-   - 下午工作 / 保持效率 → 专注 / 节奏 / 工作
-   - 晚上放松 / 回家 / 降下来一点 → 放松 / 慵懒 / 治愈
-   - 睡前 / 助眠 → 助眠 / 安静 / 夜晚
+5. Generate **3-5 short, natural candidate search phrases** for this scene (mandatory)
+   - Think like a real human using a music app to find a fitting playlist.
+   - Candidate phrases should be short, natural, and playlist-friendly.
+   - Allow slight angle variation between runs so results do not become pathologically fixed.
+   - But variation must stay scene-bounded; never drift away from the user's current context just for randomness.
+   - Good candidate length: usually 2-6 Chinese characters, sometimes a short natural phrase.
 
-5. Open search and input the short keyword
-   - If the first short keyword returns no useful result, switch to a synonym and retry.
-   - Do not keep retrying the same failed wording.
-6. Strict result filter (no live radio)
+   **Core planning rule: controlled randomization**
+   - Do **not** always reuse the same first query for the same intent.
+   - For the same scene, rotate among nearby angles such as mood / energy / routine / time-of-day / platform-typical phrasing.
+   - Keep all candidates semantically close to the user's present scene.
+
+   **Examples by scene:**
+   - 现在时间的歌 / 早上 / 早晨 / 早安
+     - 早安
+     - 清晨
+     - 通勤
+     - 晨间
+     - 今日节奏
+   - 上班提神 / 打起精神 / 提升状态
+     - 热歌
+     - 提神
+     - 振奋
+     - 通勤
+     - 上班歌单
+   - 下午工作 / 保持效率
+     - 专注
+     - 节奏
+     - 工作
+     - 提效
+     - 轻节拍
+   - 晚上放松 / 回家 / 降下来一点
+     - 放松
+     - 慵懒
+     - 治愈
+     - 晚间
+     - 下班后
+   - 睡前 / 助眠
+     - 助眠
+     - 安静
+     - 夜晚
+     - 轻音乐
+     - 入睡
+
+6. Try candidate queries one by one
+   - Start with the strongest/plausible candidate, but permit light variation in candidate order between runs.
+   - If a query returns weak, irrelevant, or radio-heavy results, move to the next candidate.
+   - Do not keep hammering the same failed wording.
+
+7. Strict result filter (no live radio)
    - first choice: 播放列表 / 歌单 / mix / collection
    - second choice: 专辑 / 艺人页中的“播放全部”
    - hard block: 站点 / Radio / Sonos Radio / TuneIn / 直播电台
    - avoid single-song detail pages if possible
-7. Click 随机播放 if available, otherwise click 播放
+
+8. Click 随机播放 if available, otherwise click 播放
    - This Web App click is mandatory for newly selected content.
    - Do not substitute a CLI start command here, even as a shortcut.
 
@@ -364,7 +401,8 @@ If verification fails, use this retry ladder (mandatory):
 - Retry #1A: if the click target is unstable, use the Web Click Fallback Rule immediately instead of repeating the same stale ref
 - Retry #2 (fresh Chrome window): open a **new Chrome window** to Sonos Web App, wait for attach, relocate the target content, and retry
 - Retry #3 (fresh Chrome window + content switch): open another **new Chrome window**, switch to the next non-radio playlist/album result, and trigger play
-- If search itself returns no useful result, switch to a short synonym keyword before escalating page-level recovery
+- If search itself returns no useful result, switch to the next planned candidate query before escalating page-level recovery
+- If the whole candidate set fails, regenerate one more small scene-bounded candidate set with a slightly different angle, then retry
 - Do not keep retrying inside the same stale Sonos tab/window once playback verification has already failed there
 - if still failing, report that playback could not be confirmed
 
@@ -544,6 +582,8 @@ Always describe only what has actually been verified.
 
 If user request includes media discovery:
 - use Web App for search/selection
+- plan 3-5 scene-bounded candidate search phrases first
+- try candidates one by one instead of forcing a single fixed keyword path
 - use Web App to click the final play trigger on the chosen content
 - then use CLI only for follow-up controls/verification
 

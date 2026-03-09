@@ -380,6 +380,11 @@ Priority order for Web clicks:
 - third: DOM/evaluate click by stable text / aria-label
 
 ### Step E: Verify Playback
+**Post-click settle window (mandatory):**
+- After the **final Web App playback trigger** (`播放` / `随机播放`) is clicked for newly selected content, wait **12 seconds** before the first CLI verification.
+- Do not check CLI immediately after the click.
+- This delay is intentional: real Sonos playback state may take several seconds to transition after the Web action lands.
+
 Playback is successful only if **CLI confirms PLAYING** and Web UI is consistent:
 1. target room is correct, if specified
 2. now playing content changed
@@ -398,6 +403,7 @@ Additional hard checks:
 
 If verification fails, use this retry ladder (mandatory):
 - Retry #1 (same content): click 播放/随机播放 once on the current non-radio item
+- After this retry click, again wait the full **12-second post-click settle window** before checking CLI.
 - Retry #1A: if the click target is unstable, use the Web Click Fallback Rule immediately instead of repeating the same stale ref
 - Retry #2 (fresh Chrome window): open a **new Chrome window** to Sonos Web App, wait for attach, relocate the target content, and retry
 - Retry #3 (fresh Chrome window + content switch): open another **new Chrome window**, switch to the next non-radio playlist/album result, and trigger play

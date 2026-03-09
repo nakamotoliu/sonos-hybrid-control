@@ -21,10 +21,10 @@ description: >
    - **See**: `~/Documents/OpenClaw-Wiki/03-SOP/SOP_默认网页访问与操作方式.md`
 
 2. **Sonos Web App Login**
-   - Account credentials stored in Bitwarden: "Sonos Web App"
-   - Username: jaosn6666@gmail.com
-   - **Auto-login**: If login page appears, credentials are automatically retrieved from Bitwarden and filled in
-   - No manual login required during automation
+   - Account credentials are stored in Bitwarden (item name maintained there)
+   - Do **not** hardcode or document the account username in this skill
+   - **Auto-login**: If login page appears, credentials are retrieved from Bitwarden at runtime and filled in
+   - Use the local wiki-documented Bitwarden retrieval pattern; do not invent a new secret access flow
 
 3. **Sonos CLI**
    - Installed via Homebrew: `brew install sonos`
@@ -122,8 +122,8 @@ When user says a fuzzy room keyword (e.g. "客厅"), do not use it directly in C
 You must resolve it to an exact speaker name first (e.g. "客厅 play5").
 
 Resolution order:
-1. Prefer exact names visible in Sonos Web App "系统视图" room cards.
-2. If Web view is unavailable, probe CLI with likely names and keep only successful exact matches.
+1. For control-only tasks, prefer resolving exact names from CLI first (`sonos discover`, `sonos status --format json`, `sonos group status --format json` when available).
+2. For media-discovery tasks already using the Web App, room cards in the Sonos Web App may also be used as an exact-name source.
 3. If multiple exact names match the same keyword, ask a short clarification before control.
 
 After resolution:
@@ -158,8 +158,8 @@ Use this action when the user wants to:
 If `target_room` is present (especially in cron/scheduled tasks):
 1. Resolve target room to exact room name.
 2. Run CLI status check for that exact room.
-3. If status indicates grouped playback (target room is joined with other rooms), ungroup target room first using local CLI ungroup/unjoin/leave command.
-4. Re-run status and confirm target room is standalone.
+3. If status indicates grouped playback (target room is joined with other rooms), ungroup the target room first using a command that actually exists in this CLI, typically `sonos group solo --name "<resolved_room_name>"` or `sonos group unjoin --name "<resolved_room_name>"`.
+4. Re-run `sonos group status` and/or `sonos status --name "<resolved_room_name>"` and confirm the target room is standalone.
 5. Only then continue to media search/playback steps.
 
 Do not skip this step for scheduled playback jobs.
@@ -169,9 +169,9 @@ Do not skip this step for scheduled playback jobs.
 This step MUST work on a locked screen. Never use AppleScript GUI scripting.
 
 **Resource policy (mandatory):**
-- Prefer reusing an existing attached Sonos tab (`browser tabs` + same domain + `wsUrl`).
-- Open a new window only when no reusable Sonos tab exists.
-- Record tab created in this run and close only that tab when task completes (do not close user tabs).
+- On the first attempt, you may reuse an existing attached Sonos tab (`browser tabs` + same domain + attachment info).
+- On any retry after a failed playback/search/UI attempt, **always open a fresh Chrome window** for Sonos instead of reusing the previous one.
+- Record tab(s) created in this run and close only those tabs/windows when task completes (do not close unrelated user tabs).
 
 1. **Check if Chrome is running:**
    ```bash
@@ -229,9 +229,11 @@ browser: action: "tabs", profile: "chrome"
 
 Attach is considered successful only if:
 - a Chrome tab URL contains `play.sonos.com`
-- and that tab has `wsUrl` (meaning relay extension is connected)
+- and that tab shows browser-relay attachment metadata (for example `wsUrl` if present in the current tool output)
 
-If NO tab has `wsUrl` after Chrome is running with the Sonos page:
+Do not hardcode a single field name as the only success signal forever. Use the current `browser tabs` output shape and confirm the tab is actually attached.
+
+If no attached Sonos tab is visible after Chrome is running with the Sonos page:
 1. Wait 5 more seconds and re-check tabs (auto-attach needs time after page load)
 2. If still no `wsUrl`, reopen the Sonos page once in visible Chrome and re-check:
    ```bash
@@ -257,13 +259,10 @@ If NO tab has `wsUrl` after Chrome is running with the Sonos page:
 Use browser snapshot.
 
 **If the page shows login form** (email/password input):
-1. Get credentials from Bitwarden:
-   ```bash
-   BW_SESSION=$(bash ~/clawd/scripts/bw-ensure-unlocked.sh 2>/dev/null)
-   SONOS_CREDS=$(BW_SESSION="$BW_SESSION" bw get item "Sonos Web App" 2>/dev/null | jq -r '.login | "\(.username)|\(.password)"')
-   USERNAME=$(echo "$SONOS_CREDS" | cut -d'|' -f1)
-   PASSWORD=$(echo "$SONOS_CREDS" | cut -d'|' -f2)
-   ```
+1. Get credentials from Bitwarden using the local wiki-documented retrieval pattern.
+   - Do **not** hardcode the username or password in this skill.
+   - Use the maintained Bitwarden helper/session flow documented in the wiki.
+   - Read the relevant local wiki note first if needed, then retrieve the login item and extract username/password at runtime.
 
 2. Fill in login form using browser automation:
    ```
@@ -330,11 +329,10 @@ Additional hard checks:
 
 If verification fails, use this retry ladder (mandatory):
 - Retry #1 (same content): click 播放/随机播放 once on the current non-radio item
-- Retry #2 (content switch): switch to the next non-radio playlist/album result and trigger play
-- Retry #3 (content switch): switch again to another non-radio result and trigger play
+- Retry #2 (fresh Chrome window): open a **new Chrome window** to Sonos Web App, wait for attach, relocate the target content, and retry
+- Retry #3 (fresh Chrome window + content switch): open another **new Chrome window**, switch to the next non-radio playlist/album result, and trigger play
 - If search itself returns no useful result, switch to a short synonym keyword before escalating page-level recovery
-- Then refresh snapshot and retry once
-- Then reload tab and retry once
+- Do not keep retrying inside the same stale Sonos tab/window once playback verification has already failed there
 - if still failing, report that playback could not be confirmed
 
 ### Step F: Optional CLI Room Control
@@ -366,10 +364,13 @@ Use safe small-step adjustment:
 - "大一点" = increase slightly
 - "小一点" = decrease slightly
 
-If CLI supports relative volume adjustment, use it.
-If not, first read current volume from:
-`sonos status --name "<resolved_room_name>"`
-Then calculate a nearby safe target and set it with exact name.
+This CLI should be treated as **absolute-volume only** unless you have directly verified a relative subcommand exists.
+Default procedure:
+1. Read current volume with `sonos volume get --name "<resolved_room_name>"` (or `sonos status --name "<resolved_room_name>"` if needed).
+2. Calculate a nearby safe target.
+3. Apply it with `sonos volume set --name "<resolved_room_name>" <target>`.
+
+Do not invent commands such as `volume up`, `volume down`, or additive volume syntax unless `sonos volume --help` on this machine explicitly shows them.
 
 ### Safety Rule
 If requested volume > 50 and user did not explicitly authorize high volume:
@@ -394,22 +395,27 @@ All grouping and ungrouping must use Sonos CLI.
 ### Grouping
 1. Resolve anchor room to exact name (`resolved_room_name`).
 
-2. For each room in rooms, resolve exact name then join via local CLI syntax.
+2. For each room in rooms, resolve the exact name, then use the actual CLI syntax supported here, typically:
+`sonos group join --name "<member_room>" "<resolved_room_name>"`
 
-3. Verify with exact name:
-`sonos status --name "<resolved_room_name>"`
+3. Verify grouping with:
+`sonos group status`
+and, if useful, `sonos status --name "<resolved_room_name>"`
 
-Confirm that grouped rooms are reflected in CLI status.
+Confirm that grouped rooms are reflected in group status output.
 
 ### Ungrouping
 If the user wants only one room to keep playing:
-1. switch to target room
-2. remove or unjoin the other rooms using the CLI capability available in your environment
+1. switch to the target room
+2. use an actually supported command such as:
+   - `sonos group solo --name "<resolved_room_name>"` (preferred when the target should play by itself)
+   - or `sonos group unjoin --name "<resolved_room_name>"` when leaving the current group
 3. verify with:
-`sonos status`
+`sonos group status`
+and optionally `sonos status --name "<resolved_room_name>"`
 
 ### Notes
-If your CLI has a different syntax for unjoin / leave / ungroup, use the local available command.
+Do not use nonexistent top-level commands like `sonos ungroup`, `sonos join`, or `sonos leave` unless a future CLI version explicitly adds them and local help confirms it.
 Always verify after grouping changes.
 
 ---
@@ -452,20 +458,16 @@ Confirm:
 ### Web Layer Recovery
 Use this only for search / playlist selection / playback triggering:
 1. retry current action once (same content)
-2. switch content to next non-radio result and retry
-3. switch content again to another non-radio result and retry
-4. refresh browser snapshot and relocate elements
-5. reload Sonos tab via navigate action
-6. if Chrome is unresponsive or no relay connection:
-   ```bash
-   pkill -x "Google Chrome" 2>/dev/null; sleep 2
-   open -a "Google Chrome" "https://play.sonos.com/zh-cn/web-app"
-   ```
-   Wait 8 seconds, then re-verify relay attach per Step B.
-7. if still failing after full restart, report failure clearly
+2. open a **fresh Chrome window** to Sonos Web App and retry there
+3. if needed, open another **fresh Chrome window**, switch to the next non-radio result, and retry
+4. relocate elements using a new browser snapshot in the fresh window
+5. only if Chrome is globally unresponsive or relay cannot attach anywhere, consider a full Chrome restart as a last resort
+6. if still failing after the fresh-window recovery path, report failure clearly
+
+Default recovery preference: **new Chrome window first, full Chrome kill/restart last**.
 
 If login page appears during recovery:
-- Follow Step C login protocol (auto-retrieve credentials from Bitwarden and fill in)
+- Follow Step C login protocol (retrieve credentials from Bitwarden at runtime and fill in)
 - If auto-login fails after 2 attempts, report: "Sonos 自动登录失败，请检查 Bitwarden 中的凭证"
 
 ### CLI Layer Recovery

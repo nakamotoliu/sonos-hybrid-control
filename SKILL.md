@@ -23,7 +23,8 @@ description: >
 2. **Sonos Web App Login**
    - Account credentials stored in Bitwarden: "Sonos Web App"
    - Username: jaosn6666@gmail.com
-   - Must be logged in before automation (one-time browser login)
+   - **Auto-login**: If login page appears, credentials are automatically retrieved from Bitwarden and filled in
+   - No manual login required during automation
 
 3. **Sonos CLI**
    - Installed via Homebrew: `brew install sonos`
@@ -242,16 +243,43 @@ If NO tab has `wsUrl` after Chrome is running with the Sonos page:
    3. Gateway token 已配置
    详见：~/Documents/OpenClaw-Wiki/03-SOP/SOP_默认网页访问与操作方式.md"
 
-### Step C: Verify UI Ready
+### Step C: Verify UI Ready and Handle Login
+
 Use browser snapshot.
-Confirm at least one of the following is visible:
+
+**If the page shows login form** (email/password input):
+1. Get credentials from Bitwarden:
+   ```bash
+   BW_SESSION=$(bash ~/clawd/scripts/bw-ensure-unlocked.sh 2>/dev/null)
+   SONOS_CREDS=$(BW_SESSION="$BW_SESSION" bw get item "Sonos Web App" 2>/dev/null | jq -r '.login | "\(.username)|\(.password)"')
+   USERNAME=$(echo "$SONOS_CREDS" | cut -d'|' -f1)
+   PASSWORD=$(echo "$SONOS_CREDS" | cut -d'|' -f2)
+   ```
+
+2. Fill in login form using browser automation:
+   ```
+   browser: action: "act", kind: "type", ref: <email_input_ref>, text: "$USERNAME"
+   browser: action: "act", kind: "type", ref: <password_input_ref>, text: "$PASSWORD"
+   browser: action: "act", kind: "click", ref: <login_button_ref>
+   ```
+
+3. Wait 5 seconds for login to complete
+
+4. Take a new snapshot and verify login succeeded
+
+5. If login fails after 2 attempts:
+   - Check if credentials are correct in Bitwarden
+   - Report: "Sonos 登录失败，请检查 Bitwarden 中的凭证是否正确"
+
+**If the page is already logged in**, confirm at least one of the following is visible:
 - playback controls
 - room cards
 - now playing area
 - search entry
 
-If the page is not logged in:
-- stop and tell the user manual login is required
+If UI elements are still not visible after login:
+- Refresh the page and wait 5 seconds
+- If still failing, report UI readiness issue
 
 ### Step D: Lobster 7-Step Play Protocol
 1. Snapshot current playback state
@@ -418,8 +446,9 @@ Use this only for search / playlist selection / playback triggering:
    Wait 8 seconds, then re-verify relay attach per Step B.
 7. if still failing after full restart, report failure clearly
 
-If login is required:
-- stop and tell the user manual login is needed
+If login page appears during recovery:
+- Follow Step C login protocol (auto-retrieve credentials from Bitwarden and fill in)
+- If auto-login fails after 2 attempts, report: "Sonos 自动登录失败，请检查 Bitwarden 中的凭证"
 
 ### CLI Layer Recovery
 Use this for volume / grouping / transport:

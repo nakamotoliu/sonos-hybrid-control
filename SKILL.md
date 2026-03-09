@@ -45,8 +45,12 @@ Use **Sonos CLI** for:
 - setting target room
 - adjusting volume
 - grouping or ungrouping rooms
-- play / pause / next / previous
+- play / pause / next / previous for already-authorized/currently-loaded content
 - all control actions during locked-screen execution
+
+**Important playback authorization rule:**
+- When the task involves choosing content (playlist / album / search result / recommendation), the **final playback trigger must be clicked in Sonos Web App**.
+- Do **not** use CLI to start newly selected content after discovery, because CLI may fail on permission/authorization for some items even when Web App can play them.
 
 Never use Web UI slider for volume control.
 Never rely on Web UI for room grouping if Sonos CLI is available.
@@ -133,9 +137,9 @@ After resolution:
 
 ## Global Rules
 
-1. If the task requires searching media, use Web App.
+1. If the task requires searching media or choosing content, use Web App.
 2. If the task is only control-related, use CLI directly.
-3. For locked-screen execution, prefer CLI whenever possible.
+3. For locked-screen execution, prefer CLI whenever possible **except** for the final play click on newly selected content, which must stay in Web App.
 4. Never claim success without checking result.
 5. Default maximum volume is 50 unless the user explicitly requests a higher value.
 6. If a room is specified, always resolve user keyword to the exact Sonos speaker name first (mandatory).
@@ -143,6 +147,7 @@ After resolution:
 8. If Web playback is triggered successfully, subsequent volume / transport / grouping should use CLI, not Web UI.
 9. **Before starting scheduled playback (or any room-specific play task), always run a grouping pre-check.** If current status shows the target room is in a group, ungroup first, then continue playback.
 10. Group pre-check must be verified by CLI status after ungroup; do not assume ungroup succeeded.
+11. For newly selected media, never replace the Web play trigger with `sonos open`, `sonos play spotify`, `sonos smapi ... + CLI play`, or any other CLI-based start command.
 
 ---
 
@@ -315,6 +320,8 @@ If UI elements are still not visible after login:
    - hard block: 站点 / Radio / Sonos Radio / TuneIn / 直播电台
    - avoid single-song detail pages if possible
 7. Click 随机播放 if available, otherwise click 播放
+   - This Web App click is mandatory for newly selected content.
+   - Do not substitute a CLI start command here, even as a shortcut.
 
 ### Step E: Verify Playback
 Playback is successful only if **CLI confirms PLAYING** and Web UI is consistent:
@@ -340,8 +347,10 @@ If target_room is specified after Web playback begins:
 run CLI with resolved exact room name:
 `sonos status --name "<resolved_room_name>"`
 
-If needed, run:
+If needed after the Web App has already successfully authorized and started the chosen content, you may use:
 `sonos play --name "<resolved_room_name>"`
+
+But do **not** use `sonos play` (or any CLI start/open command) as a replacement for the initial playback trigger of newly selected content.
 
 ---
 
@@ -508,8 +517,9 @@ Always describe only what has actually been verified.
 ## Priority Routing
 
 If user request includes media discovery:
-- use Web App first
-- then use CLI for follow-up controls
+- use Web App for search/selection
+- use Web App to click the final play trigger on the chosen content
+- then use CLI only for follow-up controls/verification
 
 If user request is only control:
 - use CLI directly

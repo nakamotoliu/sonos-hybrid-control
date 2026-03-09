@@ -381,36 +381,38 @@ Priority order for Web clicks:
 
 ### Step E: Verify Playback
 **Post-click settle window (mandatory):**
-- After the **final Web App playback trigger** (`播放` / `随机播放`) is clicked for newly selected content, wait **12 seconds** before the first CLI verification.
+- After clicking `播放` / `随机播放` on a selected non-radio playlist/result, wait **10 seconds** before the CLI verification.
 - Do not check CLI immediately after the click.
-- This delay is intentional: real Sonos playback state may take several seconds to transition after the Web action lands.
 
 Playback is successful only if **CLI confirms PLAYING** and Web UI is consistent:
 1. target room is correct, if specified
-2. now playing content changed
-3. UI state indicates playing
+2. now playing content is plausible for the selected result
+3. UI state indicates playing or has clearly transitioned
 4. CLI `sonos status --name "<room>"` shows `State: PLAYING`
 
 **Truth-source rule (mandatory):**
 - Treat Web UI as the action surface for search/selection/clicking.
 - Treat CLI as the source of truth for actual playback state.
 - If Web UI and CLI disagree temporarily, trust CLI for final success/failure reporting.
-- Do not claim a playlist/track started successfully unless CLI confirms the room is `PLAYING` and `nowPlaying` is plausible for the selected content.
+- Only claim success when CLI confirms the target room is `PLAYING` and `nowPlaying` is reasonable for the selected content.
 
 Additional hard checks:
 - If URI contains `x-sonosapi-stream` (live radio/tunein style), treat as invalid result for this workflow and re-select non-radio content.
-- Do not claim success when CLI is `STOPPED` even if Web UI button looks like playing.
+- Do not claim success when CLI is `STOPPED` or `PAUSED_PLAYBACK` even if Web UI looks like it played.
 
-If verification fails, use this retry ladder (mandatory):
-- Retry #1 (same content): click 播放/随机播放 once on the current non-radio item
-- After this retry click, again wait the full **12-second post-click settle window** before checking CLI.
-- Retry #1A: if the click target is unstable, use the Web Click Fallback Rule immediately instead of repeating the same stale ref
-- Retry #2 (fresh Chrome window): open a **new Chrome window** to Sonos Web App, wait for attach, relocate the target content, and retry
-- Retry #3 (fresh Chrome window + content switch): open another **new Chrome window**, switch to the next non-radio playlist/album result, and trigger play
-- If search itself returns no useful result, switch to the next planned candidate query before escalating page-level recovery
-- If the whole candidate set fails, regenerate one more small scene-bounded candidate set with a slightly different angle, then retry
-- Do not keep retrying inside the same stale Sonos tab/window once playback verification has already failed there
-- if still failing, report that playback could not be confirmed
+**Playback failure recovery (strict two-result policy):**
+- Attempt #1: Use the **first suitable non-radio playlist/result** you found, click `播放` / `随机播放`, wait **10 seconds**, then check CLI.
+- If CLI still does not confirm `PLAYING`, do **not** click play again on the same playlist/result.
+- Do **not** do a second play retry on the same playlist/result.
+- Attempt #2: Move directly to the **next suitable non-radio playlist/result** from the current search results, click `播放` / `随机播放`, wait **10 seconds**, then check CLI again.
+- If the second result still does not produce CLI-confirmed `PLAYING`, report: `playback could not be confirmed`.
+
+**Explicit limits (mandatory):**
+- No third playback attempt.
+- No fresh Chrome window retry for playback failure.
+- No regenerating candidate queries because playback failed.
+- No restarting the whole search round because playback failed.
+- Web Click Fallback may help the current click land, but must not increase the number of playback attempts.
 
 ### Step F: Optional CLI Room Control
 If target_room is specified after Web playback begins:
@@ -535,15 +537,18 @@ Confirm:
 ## Recovery Flow
 
 ### Web Layer Recovery
-Use this only for search / playlist selection / playback triggering:
-1. retry current action once (same content)
-2. open a **fresh Chrome window** to Sonos Web App and retry there
-3. if needed, open another **fresh Chrome window**, switch to the next non-radio result, and retry
-4. relocate elements using a new browser snapshot in the fresh window
-5. only if Chrome is globally unresponsive or relay cannot attach anywhere, consider a full Chrome restart as a last resort
-6. if still failing after the fresh-window recovery path, report failure clearly
+Use this only for search / playlist selection / playback triggering.
 
-Default recovery preference: **new Chrome window first, full Chrome kill/restart last**.
+**Scope restriction:**
+- For playback failure after a valid click, follow the strict two-result policy in Step E.
+- Do **not** expand playback recovery into fresh-window retries, third attempts, or a full search restart.
+- This section is mainly for UI targeting problems, page rendering issues, attach issues, or login interruptions.
+
+Allowed recovery actions:
+1. refresh snapshot / relocate elements for the current page
+2. use Web Click Fallback so the current intended click actually lands
+3. if login page appears, complete login and continue
+4. only if Chrome is globally unresponsive or relay cannot attach anywhere, consider broader browser recovery as a last resort for general UI access
 
 If login page appears during recovery:
 - Follow Step C login protocol (retrieve credentials from Bitwarden at runtime and fill in)

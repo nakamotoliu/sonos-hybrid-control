@@ -311,6 +311,14 @@ If UI elements are still not visible after login:
    - 男声
    - 情歌
    - 怀旧
+
+   **Intent mapping hints (use when the user is vague):**
+   - 现在时间的歌 / 早上 / 早晨 / 早安 → 早安 / 清晨 / 通勤
+   - 上班提神 / 打起精神 / 提升状态 → 热歌 / 提神 / 振奋 / 通勤
+   - 下午工作 / 保持效率 → 专注 / 节奏 / 工作
+   - 晚上放松 / 回家 / 降下来一点 → 放松 / 慵懒 / 治愈
+   - 睡前 / 助眠 → 助眠 / 安静 / 夜晚
+
 5. Open search and input the short keyword
    - If the first short keyword returns no useful result, switch to a synonym and retry.
    - Do not keep retrying the same failed wording.
@@ -323,6 +331,17 @@ If UI elements are still not visible after login:
    - This Web App click is mandatory for newly selected content.
    - Do not substitute a CLI start command here, even as a shortcut.
 
+### Step D-1: Web Click Fallback Rule (Mandatory)
+If snapshot ref click fails, times out, or the page re-renders before the click lands:
+1. Refresh the snapshot once if needed.
+2. If ref-based click is still unstable, fallback immediately to a DOM/evaluate-based click using stable visible text or aria-label.
+3. Do not keep retrying a stale aria ref multiple times.
+
+Priority order for Web clicks:
+- first: snapshot ref click
+- second: fresh snapshot ref click
+- third: DOM/evaluate click by stable text / aria-label
+
 ### Step E: Verify Playback
 Playback is successful only if **CLI confirms PLAYING** and Web UI is consistent:
 1. target room is correct, if specified
@@ -330,12 +349,19 @@ Playback is successful only if **CLI confirms PLAYING** and Web UI is consistent
 3. UI state indicates playing
 4. CLI `sonos status --name "<room>"` shows `State: PLAYING`
 
+**Truth-source rule (mandatory):**
+- Treat Web UI as the action surface for search/selection/clicking.
+- Treat CLI as the source of truth for actual playback state.
+- If Web UI and CLI disagree temporarily, trust CLI for final success/failure reporting.
+- Do not claim a playlist/track started successfully unless CLI confirms the room is `PLAYING` and `nowPlaying` is plausible for the selected content.
+
 Additional hard checks:
 - If URI contains `x-sonosapi-stream` (live radio/tunein style), treat as invalid result for this workflow and re-select non-radio content.
 - Do not claim success when CLI is `STOPPED` even if Web UI button looks like playing.
 
 If verification fails, use this retry ladder (mandatory):
 - Retry #1 (same content): click 播放/随机播放 once on the current non-radio item
+- Retry #1A: if the click target is unstable, use the Web Click Fallback Rule immediately instead of repeating the same stale ref
 - Retry #2 (fresh Chrome window): open a **new Chrome window** to Sonos Web App, wait for attach, relocate the target content, and retry
 - Retry #3 (fresh Chrome window + content switch): open another **new Chrome window**, switch to the next non-radio playlist/album result, and trigger play
 - If search itself returns no useful result, switch to a short synonym keyword before escalating page-level recovery
@@ -499,7 +525,7 @@ Do not invent success if CLI output does not confirm the action.
 - 已暂停书房播放。
 
 ### Good partial-result examples
-- 我已经在网页端找到并触发了播放，但还没能确认进度是否持续前进。
+- 我已经在网页端点击了播放，但 CLI 还没有确认客厅进入稳定播放状态。
 - 我已经切换到客厅房间，但这次 CLI 没有返回可确认的音量结果。
 - Sonos 网页端当前需要登录，我无法继续搜索和选歌单。
 

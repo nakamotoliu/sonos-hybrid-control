@@ -182,19 +182,25 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    ```bash
    open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
    ```
-   Wait 8 seconds for Chrome to start and the page to load.
+   **MANDATORY: Wait 5 seconds** for:
+   - Chrome to start
+   - Page to load
+   - Auto-attach to complete
+   
+   Then proceed to Step B to verify relay attach status.
 
 3. **If Chrome IS running:**
    Check browser tabs for an existing Sonos tab:
    ```
    browser: action: "tabs", profile: "chrome"
    ```
-   - If a tab with URL containing `play.sonos.com` exists → use its `targetId`, go to Step B.
+   - If a tab with URL containing `play.sonos.com` exists and has `wsUrl` → use its `targetId`, go to Step B.
    - If no reusable Sonos tab exists → open one via shell (prefer fresh window for deterministic attach):
      ```bash
      open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
      ```
-     Wait 5 seconds, then re-check tabs.
+     **MANDATORY: Wait 5 seconds** for page load and auto-attach to complete.
+     Then proceed to Step B to verify relay attach status.
 
 4. **If Chrome was force-quit or zombie:**
    Sometimes Chrome processes linger after force-quit. Kill cleanly first:
@@ -202,13 +208,16 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    pkill -x "Google Chrome" 2>/dev/null; sleep 2
    open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
    ```
-   Wait 8 seconds.
+   **MANDATORY: Wait 5 seconds** for page load and auto-attach to complete.
+   Then proceed to Step B to verify relay attach status.
 
 ### Step B: Verify Relay Attach
 
+**CRITICAL: This step must happen AFTER the mandatory 5-second wait in Step A.**
+
 **With auto-attach all sites enabled (default)**, pages should attach automatically within 5 seconds of opening.
 
-After Step A, verify the relay is connected:
+After the 5-second wait and opening the Sonos page, verify the relay is connected:
 ```
 browser: action: "tabs", profile: "chrome"
 ```

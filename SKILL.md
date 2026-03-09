@@ -1,6 +1,6 @@
 ---
 name: sonos-hybrid-control
-version: 2.0.0
+version: 2.1.0
 description: >
   Hybrid Sonos control for OpenClaw agent.
   Use Sonos Web App for media search and playlist selection.
@@ -9,6 +9,29 @@ description: >
 ---
 
 # Sonos Hybrid Control Skill
+
+## Prerequisites
+
+**Required (one-time setup):**
+
+1. **OpenClaw Browser Relay Extension for Chrome**
+   - **Location**: `~/clawd/projects/openclaw-browser-relay-rewrite/src/`
+   - **Installation**: Load unpacked extension in `chrome://extensions`
+   - **Must enable**: "Enable auto-attach on all HTTP/HTTPS websites" in extension options
+   - **See**: `~/Documents/OpenClaw-Wiki/03-SOP/SOP_默认网页访问与操作方式.md`
+
+2. **Sonos Web App Login**
+   - Account credentials stored in Bitwarden: "Sonos Web App"
+   - Username: jaosn6666@gmail.com
+   - Must be logged in before automation (one-time browser login)
+
+3. **Sonos CLI**
+   - Installed via Homebrew: `brew install sonos`
+   - Used for volume, grouping, transport controls
+
+**This skill does NOT auto-install the extension.** The extension must be installed and configured manually once. After that, auto-attach mode ensures all HTTP/HTTPS pages (including Sonos Web App) are automatically attached when opened.
+
+---
 
 ## Core Principle
 
@@ -117,6 +140,8 @@ After resolution:
 6. If a room is specified, always resolve user keyword to the exact Sonos speaker name first (mandatory).
 7. Use the resolved exact room name for all CLI calls (`--name "<exact_name>"`).
 8. If Web playback is triggered successfully, subsequent volume / transport / grouping should use CLI, not Web UI.
+9. **Before starting scheduled playback (or any room-specific play task), always run a grouping pre-check.** If current status shows the target room is in a group, ungroup first, then continue playback.
+10. Group pre-check must be verified by CLI status after ungroup; do not assume ungroup succeeded.
 
 ---
 
@@ -127,6 +152,16 @@ Use this action when the user wants to:
 - search by mood / keyword
 - play a playlist
 - find music in Sonos Web App
+
+### Step 0: Group Pre-check (Mandatory)
+If `target_room` is present (especially in cron/scheduled tasks):
+1. Resolve target room to exact room name.
+2. Run CLI status check for that exact room.
+3. If status indicates grouped playback (target room is joined with other rooms), ungroup target room first using local CLI ungroup/unjoin/leave command.
+4. Re-run status and confirm target room is standalone.
+5. Only then continue to media search/playback steps.
+
+Do not skip this step for scheduled playback jobs.
 
 ### Step A: Ensure Chrome is Running with Sonos Tab
 
@@ -171,6 +206,8 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
 
 ### Step B: Verify Relay Attach
 
+**With auto-attach all sites enabled (default)**, pages should attach automatically within 5 seconds of opening.
+
 After Step A, verify the relay is connected:
 ```
 browser: action: "tabs", profile: "chrome"
@@ -181,13 +218,20 @@ Attach is considered successful only if:
 - and that tab has `wsUrl` (meaning relay extension is connected)
 
 If NO tab has `wsUrl` after Chrome is running with the Sonos page:
-1. Wait 5 more seconds and re-check tabs (relay auto-attaches on page load)
-2. If still no `wsUrl`, try navigating the tab:
+1. Wait 5 more seconds and re-check tabs (auto-attach needs time after page load)
+2. If still no `wsUrl`, check extension status:
+   - Verify extension is loaded in `chrome://extensions`
+   - Verify "Enable auto-attach on all HTTP/HTTPS websites" is checked in extension options
+   - Verify gateway token is configured correctly
+3. If extension is properly configured but still not attaching, try reloading the extension:
    ```
-   browser: action: "navigate", profile: "chrome", targetId: "<sonos_tab_id>", targetUrl: "https://play.sonos.com/zh-cn/web-app"
+   Tell user: "请在 chrome://extensions 中重新加载 Browser Relay 扩展"
    ```
-3. Wait 5 seconds and re-check
-4. If still fails after 3 attempts, report: "Chrome relay 未连接，请确认 OpenClaw Browser Relay 扩展已安装并启用"
+4. If still fails after verification, report: "Chrome relay 未连接。请确认：
+   1. OpenClaw Browser Relay 扩展已安装
+   2. Auto-attach all sites 已启用
+   3. Gateway token 已配置
+   详见：~/Documents/OpenClaw-Wiki/03-SOP/SOP_默认网页访问与操作方式.md"
 
 ### Step C: Verify UI Ready
 Use browser snapshot.

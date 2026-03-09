@@ -359,9 +359,11 @@ If UI elements are still not visible after login:
    - Do not keep hammering the same failed wording.
 
 7. Strict result filter (no live radio)
-   - first choice: 播放列表 / 歌单 / mix / collection
-   - second choice: 专辑 / 艺人页中的“播放全部”
+   - allowed services only: **网易云音乐** and **QQ音乐**
+   - first choice: 来自网易云音乐 / QQ音乐的 播放列表 / 歌单 / mix / collection
+   - second choice: 来自网易云音乐 / QQ音乐的 专辑 / 艺人页中的“播放全部”
    - hard block: 站点 / Radio / Sonos Radio / TuneIn / 直播电台
+   - hard block: any result from services other than **网易云音乐** or **QQ音乐**
    - avoid single-song detail pages if possible
 
 8. Click 随机播放 if available, otherwise click 播放
@@ -595,6 +597,7 @@ If user request includes media discovery:
 - use Web App for search/selection
 - plan 3-5 scene-bounded candidate search phrases first
 - try candidates one by one instead of forcing a single fixed keyword path
+- choose results only from **网易云音乐** or **QQ音乐**
 - use Web App to click the final play trigger on the chosen content
 - then use CLI only for follow-up controls/verification
 

@@ -1,0 +1,14 @@
+{
+  "name": "sonos-hybrid-control",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Hybrid Sonos control skill with Playwright-powered Web App automation and CLI verification.",
+  "scripts": {
+    "review": "node scripts/review.js",
+    "test:cases": "node src/playwright/test_cases.js"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
+  }
+}

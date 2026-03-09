@@ -1,0 +1,16 @@
+2026/03/09-20:51:37.319 3e046c Reusing MANIFEST /Users/nakamoto_jason/clawd/skills/sonos-hybrid-control/.playwright-sonos-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/03/09-20:51:37.321 3e046c Recovering log #9
+2026/03/09-20:51:37.321 3e046c Level-0 table #12: started
+2026/03/09-20:51:37.329 3e046c Level-0 table #12: 81973 bytes OK
+2026/03/09-20:51:37.334 3e046c Delete type=0 #9
+2026/03/09-20:52:03.041 3e046f Level-0 table #15: started
+2026/03/09-20:52:03.044 3e046f Level-0 table #15: 80746 bytes OK
+2026/03/09-20:52:03.045 3e046f Delete type=0 #13
+2026/03/09-20:52:03.045 3e046f Compacting 4@0 + 0@1 files
+2026/03/09-20:52:03.047 3e046f Generated table #16@0: 10 keys, 81182 bytes
+2026/03/09-20:52:03.047 3e046f Compacted 4@0 + 0@1 files => 81182 bytes
+2026/03/09-20:52:03.048 3e046f compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/03/09-20:52:03.048 3e046f Delete type=2 #15
+2026/03/09-20:52:03.048 3e046f Delete type=2 #7
+2026/03/09-20:52:03.048 3e046f Delete type=2 #12
+2026/03/09-20:52:03.048 3e046f Delete type=2 #10

@@ -299,7 +299,13 @@ If UI elements are still not visible after login:
 1. Snapshot current playback state
 2. If currently playing, pause first
 3. Wait until paused state is reflected in UI
-4. Infer the user's **real current listening scene** from the request
+4. **For every new search round, open the canonical Sonos search page directly:** `https://play.sonos.com/zh-cn/search`
+   - Do not rely on the current page's embedded/top search box when you are inside a playlist, album, or detail page.
+   - Reusing the in-page search box from a detail page is considered unreliable and should be treated as invalid for this workflow.
+   - After navigating to `/zh-cn/search`, if a previous search layer/panel is still open, **click `关闭` first** to dismiss the stale search overlay/state.
+   - Then ensure you are in a fresh search state before entering the new query.
+   - After entering the query, verify that the result state actually refreshed for the new keyword before selecting content.
+5. Infer the user's **real current listening scene** from the request
    - Treat the user's words as the scene/intention, not as a fixed keyword to compress mechanically.
    - Example scene types:
      - 早晨 / 通勤 / 刚开始工作
@@ -358,30 +364,68 @@ If UI elements are still not visible after login:
    - If a query returns weak, irrelevant, or radio-heavy results, move to the next candidate.
    - Do not keep hammering the same failed wording.
 
-7. Strict result filter (no live radio)
+7. Expand full results before choosing content (mandatory)
+   - After entering a search query, **first click `全部`** (or the equivalent “all results” entry) to expand the full result view.
+   - Treat the pre-expanded mixed summary view as unreliable for final selection.
+   - After clicking `全部`, always take a **fresh snapshot** before selecting a result.
+   - If the desired result area appears below the fold after expansion, scroll first, then snapshot again, then act.
+   - Never reuse a pre-expansion ref after `全部` is clicked.
+
+8. Strict result filter (no live radio)
    - allowed services only: **网易云音乐** and **QQ音乐**
+   - after `全部` is expanded, **prioritize results visually grouped under the 网易云音乐 / QQ音乐 icon labels**
    - first choice: 来自网易云音乐 / QQ音乐的 播放列表 / 歌单 / mix / collection
    - second choice: 来自网易云音乐 / QQ音乐的 专辑 / 艺人页中的“播放全部”
    - hard block: 站点 / Radio / Sonos Radio / TuneIn / 直播电台
    - hard block: any result from services other than **网易云音乐** or **QQ音乐**
    - avoid single-song detail pages if possible
+   - do not select a result from a generic mixed list if the same search has a clearer 网易云音乐 / QQ音乐 section lower on the page
 
-8. Click 随机播放 if available, otherwise click 播放
+9. Prefer `播放` as the default final trigger for newly selected content
+   - Use `播放` first as the default and more stable path.
+   - Use `随机播放` only when the user explicitly asks for shuffle/random playback.
    - This Web App click is mandatory for newly selected content.
    - Do not substitute a CLI start command here, even as a shortcut.
 
-### Step D-1: Web Click Fallback Rule (Mandatory)
+### Step D-1: Search Result Card Click Rule (Mandatory)
+When selecting a search result from the results list:
+1. Prefer clicking the **outer clickable result card / button**, not an inner text node, icon, paragraph, or label.
+2. Match a result card using the combined evidence of:
+   - target title text
+   - service icon/label (网易云音乐 or QQ音乐)
+   - result type hint (播放列表 / 专辑 / 可接受的播放入口)
+3. If only inner text is easy to find, walk up to the nearest clickable ancestor (`button`, `[role="button"]`, clickable card container) before clicking.
+4. After clicking a result card, you must verify page transition by checking at least one of:
+   - detail page opened
+   - 播放 / 随机播放 button appeared for that selected item
+   - now-playing context clearly switched to the selected content page
+5. If click returns without a page transition, treat it as a failed click and retry with a stronger fallback.
+
+### Step D-2: Web Click Fallback Rule (Mandatory)
 If snapshot ref click fails, times out, or the page re-renders before the click lands:
 1. Refresh the snapshot once if needed.
-2. If ref-based click is still unstable, fallback immediately to a DOM/evaluate-based click using stable visible text or aria-label.
-3. Do not keep retrying a stale aria ref multiple times.
+2. If the failure happened after switching source or clicking `全部`, assume layout changed and the target result may now be lower on the page.
+3. Scroll to the relevant 网易云音乐 / QQ音乐 result section if needed.
+4. Take a fresh snapshot.
+5. If ref-based click is still unstable, fallback immediately to a DOM/evaluate-based click on the **outer clickable result card**, using stable visible text + nearest clickable ancestor.
+6. After fallback click, verify that page transition actually happened.
+7. Do not keep retrying a stale aria ref multiple times.
 
 Priority order for Web clicks:
 - first: snapshot ref click
-- second: fresh snapshot ref click
-- third: DOM/evaluate click by stable text / aria-label
+- second: fresh snapshot ref click after layout refresh / scroll
+- third: DOM/evaluate click on nearest clickable ancestor
 
 ### Step E: Verify Playback
+**Playback-button targeting rule (mandatory):**
+- On the selected content detail page, do **not** blindly click the first button whose visible name contains `播放`.
+- Prefer the playback button whose `aria-label` is clearly bound to the selected target title, i.e. it contains both `播放` and the chosen content title.
+- Example: if the selected title is `『舒缓安神』失眠专属助眠纯音乐`, prefer a button like:
+  - `button[aria-label="播放『舒缓安神』失眠专属助眠纯音乐"]`
+  - or, if exact match is unavailable, a button whose `aria-label` contains the target title text.
+- This rule exists to avoid misclicking the bottom transport bar play control, another card's play button, or an unrelated generic `播放` button elsewhere on the page.
+- Only if no title-bound playback button can be found may you fallback to a main-detail-area `播放` / `随机播放` button; if you do, explicitly note in the result that title-bound targeting was unavailable and fallback was used.
+
 **Post-click settle window (mandatory):**
 - After clicking `播放` / `随机播放` on a selected non-radio playlist/result, wait **10 seconds** before the CLI verification.
 - Do not check CLI immediately after the click.

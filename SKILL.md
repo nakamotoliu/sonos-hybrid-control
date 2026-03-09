@@ -212,6 +212,10 @@ This step MUST work on a locked screen. Never use AppleScript GUI scripting.
    **MANDATORY: Wait 5 seconds** for page load and auto-attach to complete.
    Then proceed to Step B to verify relay attach status.
 
+5. **If the user wants to watch live:**
+   Prefer the visible Chrome relay tab/profile for interactive playback/search demonstrations.
+   Only fall back to the isolated `openclaw` browser profile when the visible Chrome relay tab is unavailable, detached, or unusable.
+
 ### Step B: Verify Relay Attach
 
 **CRITICAL: This step must happen AFTER the mandatory 5-second wait in Step A.**
@@ -229,15 +233,20 @@ Attach is considered successful only if:
 
 If NO tab has `wsUrl` after Chrome is running with the Sonos page:
 1. Wait 5 more seconds and re-check tabs (auto-attach needs time after page load)
-2. If still no `wsUrl`, check extension status:
+2. If still no `wsUrl`, reopen the Sonos page once in visible Chrome and re-check:
+   ```bash
+   open -na "Google Chrome" --args --new-window "https://play.sonos.com/zh-cn/web-app"
+   ```
+   Wait 5 seconds, then re-run `browser tabs`.
+3. If still no `wsUrl`, check extension status:
    - Verify extension is loaded in `chrome://extensions`
    - Verify "Enable auto-attach on all HTTP/HTTPS websites" is checked in extension options
    - Verify gateway token is configured correctly
-3. If extension is properly configured but still not attaching, try reloading the extension:
+4. If extension is properly configured but still not attaching, try reloading the extension:
    ```
    Tell user: "请在 chrome://extensions 中重新加载 Browser Relay 扩展"
    ```
-4. If still fails after verification, report: "Chrome relay 未连接。请确认：
+5. If still fails after verification, report: "Chrome relay 未连接。请确认：
    1. OpenClaw Browser Relay 扩展已安装
    2. Auto-attach all sites 已启用
    3. Gateway token 已配置
@@ -285,14 +294,22 @@ If UI elements are still not visible after login:
 1. Snapshot current playback state
 2. If currently playing, pause first
 3. Wait until paused state is reflected in UI
-4. Reduce user intent into a 2-4 character keyword
+4. Reduce user intent into a 2-4 character keyword (mandatory)
+   - Never search with long natural-language phrases first.
+   - Always compress intent to a short keyword before typing.
    Examples:
    - 放松
    - 专注
    - 振奋
    - 助眠
    - 治愈
-5. Open search and input the keyword
+   - 学友
+   - 男声
+   - 情歌
+   - 怀旧
+5. Open search and input the short keyword
+   - If the first short keyword returns no useful result, switch to a synonym and retry.
+   - Do not keep retrying the same failed wording.
 6. Strict result filter (no live radio)
    - first choice: 播放列表 / 歌单 / mix / collection
    - second choice: 专辑 / 艺人页中的“播放全部”
@@ -315,6 +332,7 @@ If verification fails, use this retry ladder (mandatory):
 - Retry #1 (same content): click 播放/随机播放 once on the current non-radio item
 - Retry #2 (content switch): switch to the next non-radio playlist/album result and trigger play
 - Retry #3 (content switch): switch again to another non-radio result and trigger play
+- If search itself returns no useful result, switch to a short synonym keyword before escalating page-level recovery
 - Then refresh snapshot and retry once
 - Then reload tab and retry once
 - if still failing, report that playback could not be confirmed

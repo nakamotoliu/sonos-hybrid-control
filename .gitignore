@@ -1,6 +1,10 @@
-# Playwright browser profiles and caches
+# Playwright-related files (must never be uploaded)
 .playwright-*
 .playwright
+src/playwright/
+package.json
+package-lock.json
+.env.example
 
 # Node modules
 node_modules/

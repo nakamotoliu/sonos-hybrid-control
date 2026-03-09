@@ -2,14 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const files = [
-  'package.json',
   'src/cli/sonos.js',
-  'src/playwright/bitwarden.js',
-  'src/playwright/config.js',
-  'src/playwright/queries.js',
-  'src/playwright/sonos_web.js',
-  'src/playwright/test_cases.js',
-  '.env.example',
   '.gitignore'
 ];
 

@@ -1,4 +1,4 @@
-# Sonos Hybrid Control Skill
+it is not working       # Sonos Hybrid Control Skill
 
 This is a hybrid control skill for OpenClaw that automates your Sonos system. It uses a dual-layer approach for maximum stability, especially during locked-screen background execution:
 
